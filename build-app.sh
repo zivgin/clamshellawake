@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Build Afterlid.app and install it to /Applications.
+# Signs with Developer ID and notarizes when that identity and the notary
+# profile exist (scripts/sign-notarize.sh), else ad hoc as before.
+# --no-install: build and sign build/Afterlid.app only.
 set -euo pipefail
 cd "$(dirname "$0")"
+INSTALL=1; [ "${1:-}" = "--no-install" ] && INSTALL=0
+SIGN=scripts/sign-notarize.sh
 swift build -c release
 APP=build/Afterlid.app
 rm -rf build && mkdir -p "$APP/Contents/MacOS"
@@ -20,7 +25,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
-codesign --force -s - "$APP"
+$SIGN stamp "$APP"
+$SIGN sign-app "$APP" --entitlements Afterlid.entitlements --fallback -
+$SIGN notarize "$APP"
+$SIGN verify "$APP"
+[ "$INSTALL" = 1 ] || { echo "Built $APP (not installed)"; exit 0; }
 rm -rf /Applications/Afterlid.app
 cp -R "$APP" /Applications/Afterlid.app
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/Afterlid.app
