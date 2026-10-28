@@ -1,6 +1,7 @@
 #!/bin/bash
-# Shared macOS signing and notarization helper (same file in gumi-glucose,
-# SnapMark, Afterlid, Panes and MDPad; keep the copies identical).
+# Shared macOS signing and notarization helper. The same file lives in Gumi,
+# Cockpit, SnapMark, Afterlid, Panes, MDPad, Lineage, Meeting Plane and Sony
+# Sound Fixer; keep all copies identical.
 #
 # With a "Developer ID Application" identity in the keychain it signs for
 # distribution: hardened runtime, secure timestamp, inside-out (no --deep),
@@ -146,7 +147,7 @@ cmd_sign_app() {
         local skip=0 m
         for m in "${mains[@]+"${mains[@]}"}"; do [ "$p" = "$m" ] && skip=1; done
         [ "$skip" = 0 ] && is_macho "$p" && items+=("$p")
-    done < <(find "$app/Contents" -type f -perm -u+x 2>/dev/null; find "$app/Contents" -type f \( -name '*.dylib' -o -name '*.so' \) 2>/dev/null)
+    done < <(find "$app/Contents" -type f -perm -u+x 2>/dev/null; find "$app/Contents" -type f \( -name '*.dylib' -o -name '*.so' -o -name '*.node' \) 2>/dev/null)
 
     local sorted=()
     if [ ${#items[@]} -gt 0 ]; then
@@ -201,7 +202,7 @@ cmd_verify() {
     if is_devid; then spctl -a -vv -t exec "$app" || log "spctl: not accepted yet (notarize first)"; fi
 }
 
-[ $# -ge 1 ] || { sed -n '2,38p' "$0"; exit 2; }
+[ $# -ge 1 ] || { sed -n '2,39p' "$0"; exit 2; }
 cmd="$1"; shift
 case "$cmd" in
     identity) resolve_identity "${1:--}" ;;
