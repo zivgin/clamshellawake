@@ -175,7 +175,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Docs helper: CLAMSHELLAWAKE_SNAPSHOT=<file> opens the menu on launch and writes the
         // icon's screen frame to <file>, so README screenshots can be captured by script.
-        if let out = ProcessInfo.processInfo.environment["CLAMSHELLAWAKE_SNAPSHOT"] {
+        // Docs helper: CLAMSHELLAWAKE_CAPTURE=<dir> saves a PNG of each of our windows there
+        // (needs Screen Recording for the app). Add CLAMSHELLAWAKE_WELCOME=1 to show the welcome.
+        let env = ProcessInfo.processInfo.environment
+        if env["CLAMSHELLAWAKE_WELCOME"] != nil { showWelcome() }
+        if let dir = env["CLAMSHELLAWAKE_CAPTURE"] {
+            Thread.detachNewThread {
+                Thread.sleep(forTimeInterval: 3)
+                let pid = ProcessInfo.processInfo.processIdentifier
+                let list = CGWindowListCopyWindowInfo(.optionAll, kCGNullWindowID) as? [[String: Any]] ?? []
+                for w in list where (w[kCGWindowOwnerPID as String] as? Int32) == pid {
+                    guard let id = w[kCGWindowNumber as String] as? Int,
+                          let b = w[kCGWindowBounds as String] as? [String: Double], (b["Height"] ?? 0) > 60 else { continue }
+                    LidSwitch.run("/usr/sbin/screencapture", ["-x", "-o", "-l", "\(id)", "\(dir)/window-\(id).png"])
+                }
+                LidSwitch.run("/usr/bin/touch", ["\(dir)/done"])
+            }
+        }
+        if let out = env["CLAMSHELLAWAKE_SNAPSHOT"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 guard let self, let f = self.item.button?.window?.frame else { return }
                 try? "\(Int(f.minX)) \(Int(f.maxY)) \(Int(f.width)) \(Int(f.height))".write(toFile: out, atomically: true, encoding: .utf8)
