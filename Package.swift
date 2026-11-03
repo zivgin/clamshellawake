@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "Afterlid",
+    name: "ClamshellAwake",
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(
-            name: "Afterlid",
-            path: "Sources/Afterlid",
+            name: "ClamshellAwake",
+            path: "Sources/ClamshellAwake",
             linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("AppKit"), .linkedFramework("ServiceManagement")]
         )
     ]

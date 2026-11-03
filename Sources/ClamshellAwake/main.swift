@@ -1,4 +1,4 @@
-// Afterlid: a menu-bar replacement for Caffeine that can also keep the Mac running
+// ClamshellAwake: a menu-bar replacement for Caffeine that can also keep the Mac running
 // with the lid closed, under conditions (plugged in, battery floor, temperature).
 //
 // Two independent features:
@@ -33,7 +33,7 @@ enum Key {
 }
 
 /// Posted by the CLI after it changes a setting, so the running app applies it at once.
-let changedNote = Notification.Name("com.zivgin.afterlid.changed")
+let changedNote = Notification.Name("com.zivgin.clamshellawake.changed")
 
 let defaults = UserDefaults.standard
 
@@ -72,7 +72,7 @@ func readPower() -> PowerState {
 // MARK: - The lid switch (pmset disablesleep), via a narrow sudoers rule
 
 enum LidSwitch {
-    static let sudoersPath = "/etc/sudoers.d/afterlid"
+    static let sudoersPath = "/etc/sudoers.d/clamshellawake"
 
     /// Is the system-wide "never sleep, even on lid close" switch on right now?
     static func isOn() -> Bool {
@@ -96,10 +96,10 @@ enum LidSwitch {
     static func installHelper() -> Bool {
         let user = NSUserName()
         let rule = "\(user) ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bin/pmset -a disablesleep 1\n"
-        let tmp = NSTemporaryDirectory() + "afterlid.sudoers"
+        let tmp = NSTemporaryDirectory() + "clamshellawake.sudoers"
         do { try rule.write(toFile: tmp, atomically: true, encoding: .utf8) } catch { return false }
         let shell = "/usr/sbin/visudo -cf '\(tmp)' && /usr/bin/install -m 0440 -o root -g wheel '\(tmp)' '\(sudoersPath)'"
-        let script = "do shell script \"\(shell)\" with administrator privileges with prompt \"Afterlid needs your password once to control lid-closed sleep.\""
+        let script = "do shell script \"\(shell)\" with administrator privileges with prompt \"ClamshellAwake needs your password once to control lid-closed sleep.\""
         var err: NSDictionary?
         NSAppleScript(source: script)?.executeAndReturnError(&err)
         try? FileManager.default.removeItem(atPath: tmp)
@@ -168,13 +168,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         evaluate()
 
         // First launch: a menu-bar app appears silently, so introduce it once.
-        if !defaults.bool(forKey: Key.welcomed) && ProcessInfo.processInfo.environment["AFTERLID_SNAPSHOT"] == nil {
+        if !defaults.bool(forKey: Key.welcomed) && ProcessInfo.processInfo.environment["CLAMSHELLAWAKE_SNAPSHOT"] == nil {
             showWelcome()
         }
 
-        // Docs helper: AFTERLID_SNAPSHOT=<file> opens the menu on launch and writes the
+        // Docs helper: CLAMSHELLAWAKE_SNAPSHOT=<file> opens the menu on launch and writes the
         // icon's screen frame to <file>, so README screenshots can be captured by script.
-        if let out = ProcessInfo.processInfo.environment["AFTERLID_SNAPSHOT"] {
+        if let out = ProcessInfo.processInfo.environment["CLAMSHELLAWAKE_SNAPSHOT"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 guard let self, let f = self.item.button?.window?.frame else { return }
                 try? "\(Int(f.minX)) \(Int(f.maxY)) \(Int(f.width)) \(Int(f.height))".write(toFile: out, atomically: true, encoding: .utf8)
@@ -252,7 +252,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func setAssertion(_ id: inout IOPMAssertionID, on: Bool, type: String) {
         if on && id == 0 {
             IOPMAssertionCreateWithName(type as CFString, IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                                        "Afterlid" as CFString, &id)
+                                        "ClamshellAwake" as CFString, &id)
         } else if !on && id != 0 {
             IOPMAssertionRelease(id)
             id = 0
@@ -269,8 +269,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Always the coffee cup, so the app is easy to spot: filled while it keeps the Mac awake
         // (or keeps it running with the lid closed), outline when idle. The lid state lives in the tooltip and menu.
         let name = (awake || lidActive) ? "cup.and.saucer.fill" : "cup.and.saucer"
-        let base = NSImage(systemSymbolName: name, accessibilityDescription: "Afterlid")
-            ?? NSImage(systemSymbolName: "cup.and.saucer", accessibilityDescription: "Afterlid")
+        let base = NSImage(systemSymbolName: name, accessibilityDescription: "ClamshellAwake")
+            ?? NSImage(systemSymbolName: "cup.and.saucer", accessibilityDescription: "ClamshellAwake")
         if LidSwitch.helperInstalled {
             base?.isTemplate = true
             item.button?.image = base
@@ -376,14 +376,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         pref.submenu = prefMenu
         menu.addItem(pref)
-        menu.addItem(check("Keep awake when Afterlid starts", defaults.bool(forKey: Key.activateOnLaunch), #selector(toggleActivateOnLaunch)))
+        menu.addItem(check("Keep awake when ClamshellAwake starts", defaults.bool(forKey: Key.activateOnLaunch), #selector(toggleActivateOnLaunch)))
         let welcome = NSMenuItem(title: "Welcome and setup…", action: #selector(showWelcome), keyEquivalent: "")
         welcome.target = self
         menu.addItem(welcome)
         menu.addItem(check("Launch at login", SMAppService.mainApp.status == .enabled, #selector(toggleLogin)))
         // Own selector (not NSApplication.terminate) so macOS doesn't auto-add an icon that
         // shifts the whole last section to the right.
-        let quit = NSMenuItem(title: "Quit Afterlid", action: #selector(quitApp), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit ClamshellAwake", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
     }
@@ -488,18 +488,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let w = welcomeWindow { w.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 380),
                          styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        w.title = "Welcome to Afterlid"
+        w.title = "Welcome to ClamshellAwake"
         w.isReleasedWhenClosed = false
 
         let icon = NSImageView(image: NSImage(systemSymbolName: "laptopcomputer", accessibilityDescription: nil) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 44, weight: .regular)
         icon.contentTintColor = .controlAccentColor
 
-        let title = NSTextField(labelWithString: "Close the lid. Keep working.")
+        let title = NSTextField(labelWithString: "Keep your Mac awake, lid closed.")
         title.font = .boldSystemFont(ofSize: 20)
 
         let body = NSTextField(wrappingLabelWithString:
-            "Afterlid lives in your menu bar.\n\n" +
+            "ClamshellAwake lives in your menu bar.\n\n" +
             "•  Click the icon to keep your Mac awake. Right-click for the menu.\n" +
             "•  Turn on \"Keep running with lid closed\" to keep working with the lid shut, no monitor needed. " +
             "It only runs while plugged in (you can change the conditions) and switches itself off when they fail.")
@@ -508,7 +508,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let setup = NSButton(title: "", target: self, action: #selector(welcomeSetup))
         setup.bezelStyle = .rounded
         setupButton = setup
-        let login = NSButton(checkboxWithTitle: "Launch Afterlid at login", target: self, action: #selector(welcomeLogin))
+        let login = NSButton(checkboxWithTitle: "Launch ClamshellAwake at login", target: self, action: #selector(welcomeLogin))
         loginCheckbox = login
         let done = NSButton(title: "Done", target: self, action: #selector(closeWelcome))
         done.bezelStyle = .rounded
@@ -551,11 +551,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 // MARK: - CLI
 //
-//   afterlid status
-//   afterlid awake on [minutes]   |  afterlid awake off
-//   afterlid lid on               |  afterlid lid off
-//   afterlid display on|off       (keep the screen on too while awake)
-//   afterlid only-on-power on|off |  afterlid battery-floor <pct>  |  afterlid pause-when-hot on|off
+//   clamshellawake status
+//   clamshellawake awake on [minutes]   |  clamshellawake awake off
+//   clamshellawake lid on               |  clamshellawake lid off
+//   clamshellawake display on|off       (keep the screen on too while awake)
+//   clamshellawake only-on-power on|off |  clamshellawake battery-floor <pct>  |  clamshellawake pause-when-hot on|off
 //
 // Writes the setting, pokes the running app (launching it if needed), then prints the
 // resulting status. Exit 0 on success, 2 on bad usage, 3 if lid mode needs its one-time
@@ -575,17 +575,17 @@ func cliStatus() -> String {
         let reason = defaults.string(forKey: Key.lidPausedBecause) ?? ""
         lines.append(LidSwitch.isOn() ? "lid: on (active, keeps running with lid closed)" : "lid: on but paused (\(reason.isEmpty ? "starting" : reason))")
     } else { lines.append("lid: off") }
-    if !LidSwitch.helperInstalled { lines.append("lid setup: NOT approved yet (run `afterlid setup` or click the red bar in the menu)") }
+    if !LidSwitch.helperInstalled { lines.append("lid setup: NOT approved yet (run `clamshellawake setup` or click the red bar in the menu)") }
     let p = readPower()
     lines.append("power: \(p.onAC ? "plugged in" : "battery")\(p.batteryPercent.map { ", \($0)%" } ?? "")")
     lines.append("conditions: only-on-power=\(defaults.bool(forKey: Key.lidOnlyOnPower) ? "on" : "off") battery-floor=\(defaults.integer(forKey: Key.lidMinBattery))% pause-when-hot=\(defaults.bool(forKey: Key.lidPauseWhenHot) ? "on" : "off")")
-    lines.append("app: \(NSRunningApplication.runningApplications(withBundleIdentifier: "com.zivgin.afterlid").contains { $0.processIdentifier != getpid() } ? "running" : "not running")")
+    lines.append("app: \(NSRunningApplication.runningApplications(withBundleIdentifier: "com.zivgin.clamshellawake").contains { $0.processIdentifier != getpid() } ? "running" : "not running")")
     return lines.joined(separator: "\n")
 }
 
 func runCLI(_ args: [String]) -> Int32 {
     func onOff(_ v: String?) -> Bool? { v == "on" ? true : v == "off" ? false : nil }
-    let usage = "usage: afterlid status | setup | awake on [minutes] | awake off | lid on|off | display on|off | only-on-power on|off | battery-floor <pct> | pause-when-hot on|off"
+    let usage = "usage: clamshellawake status | setup | awake on [minutes] | awake off | lid on|off | display on|off | only-on-power on|off | battery-floor <pct> | pause-when-hot on|off"
     switch (args.first, args.dropFirst().first) {
     case ("setup", _):
         if LidSwitch.helperInstalled { print("already approved"); return 0 }
@@ -603,7 +603,7 @@ func runCLI(_ args: [String]) -> Int32 {
     case ("lid", let v):
         guard let on = onOff(v) else { print(usage); return 2 }
         if on && !LidSwitch.helperInstalled {
-            print("lid mode needs a one-time approval: run `afterlid setup` (opens the password prompt) or click the red bar in the Afterlid menu.")
+            print("lid mode needs a one-time approval: run `clamshellawake setup` (opens the password prompt) or click the red bar in the ClamshellAwake menu.")
             return 3
         }
         defaults.set(on, forKey: Key.lidOn)
@@ -624,8 +624,8 @@ func runCLI(_ args: [String]) -> Int32 {
     }
     CFPreferencesAppSynchronize(kCFPreferencesCurrentApplication)
     // Make sure the app is running to apply it, then poke it.
-    if NSRunningApplication.runningApplications(withBundleIdentifier: "com.zivgin.afterlid").filter({ $0.processIdentifier != getpid() }).isEmpty {
-        _ = LidSwitch.run("/usr/bin/open", ["-g", "/Applications/Afterlid.app"])
+    if NSRunningApplication.runningApplications(withBundleIdentifier: "com.zivgin.clamshellawake").filter({ $0.processIdentifier != getpid() }).isEmpty {
+        _ = LidSwitch.run("/usr/bin/open", ["-g", "/Applications/ClamshellAwake.app"])
         Thread.sleep(forTimeInterval: 2)
     }
     DistributedNotificationCenter.default().postNotificationName(changedNote, object: nil, userInfo: nil, deliverImmediately: true)

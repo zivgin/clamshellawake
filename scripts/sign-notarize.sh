@@ -1,6 +1,6 @@
 #!/bin/bash
 # Shared macOS signing and notarization helper. The same file lives in Gumi,
-# Cockpit, SnapMark, Afterlid, Panes, MDPad, Lineage, Meeting Plane and Sony
+# Cockpit, SnapMark, ClamshellAwake, Panes, MDPad, Lineage, Meeting Plane and Sony
 # Sound Fixer; keep all copies identical.
 #
 # With a "Developer ID Application" identity in the keychain it signs for

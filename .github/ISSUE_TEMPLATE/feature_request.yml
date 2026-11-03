@@ -12,4 +12,4 @@ body:
   - type: textarea
     id: idea
     attributes:
-      label: What would you like Afterlid to do?
+      label: What would you like ClamshellAwake to do?

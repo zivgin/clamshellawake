@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# CLI for ClamshellAwake. Runs the app binary in command mode. Bare `clamshellawake` = status.
+exec /Applications/ClamshellAwake.app/Contents/MacOS/ClamshellAwake "${@:-status}"
