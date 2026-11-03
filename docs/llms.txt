@@ -1,0 +1,19 @@
+# ClamshellAwake
+
+> Free, open-source macOS menu-bar app and CLI that keeps a MacBook awake and running with the lid closed, without an external monitor, keyboard or mouse.
+
+ClamshellAwake is for long-running local work: AI coding agents, builds, renders, downloads, backups, a home server on a laptop. It turns lid-closed sleep off only while you want it, with safety limits (only on power, battery floor, pause when hot) and always turns it back on when it quits or crashes.
+
+## Key facts
+- Platform: macOS 13 or later, Apple silicon and Intel
+- Price: free, MIT license, no account, no tracking
+- Install: build from source, see https://github.com/zivgin/clamshellawake
+- CLI: `clamshellawake lid on`, `clamshellawake awake on 90`, `clamshellawake` (status)
+- How it works: `pmset disablesleep`, through a one-time sudoers rule that allows only that command
+
+## Pages
+- [Home and FAQ](https://zivgin.github.io/clamshellawake/)
+- [Source and README](https://github.com/zivgin/clamshellawake)
+
+## Compared with alternatives
+- `caffeinate` and Amphetamine-style apps stop idle sleep, but closing the lid still sleeps the Mac (unless an external display is connected). ClamshellAwake keeps it running with the lid closed.
