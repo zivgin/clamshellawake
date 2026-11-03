@@ -100,10 +100,11 @@ enum LidSwitch {
         do { try rule.write(toFile: tmp, atomically: true, encoding: .utf8) } catch { return false }
         let shell = "/usr/sbin/visudo -cf '\(tmp)' && /usr/bin/install -m 0440 -o root -g wheel '\(tmp)' '\(sudoersPath)'"
         let script = "do shell script \"\(shell)\" with administrator privileges with prompt \"ClamshellAwake needs your password once to control lid-closed sleep.\""
-        var err: NSDictionary?
-        NSAppleScript(source: script)?.executeAndReturnError(&err)
+        // Run the prompt in its own osascript process: an in-process NSAppleScript from a
+        // menu-bar app can leave the password dialog unable to receive keystrokes.
+        let ok = run("/usr/bin/osascript", ["-e", script]).status == 0
         try? FileManager.default.removeItem(atPath: tmp)
-        return err == nil && helperInstalled
+        return ok && helperInstalled
     }
 
     @discardableResult
