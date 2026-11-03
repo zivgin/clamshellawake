@@ -438,8 +438,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc func approveFromBar() {
         menu.cancelTracking()
-        NSApp.activate(ignoringOtherApps: true)
-        if LidSwitch.installHelper() { evaluate() }
+        approve { _ in }
+    }
+
+    /// Ask for the admin password off the main thread. Blocking the main thread while the
+    /// prompt is up left the app frozen in front, so the dialog never got the keystrokes.
+    func approve(_ done: @escaping (Bool) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let ok = LidSwitch.installHelper()
+            DispatchQueue.main.async {
+                if ok { self.evaluate() }
+                self.refreshWelcome()
+                done(ok)
+            }
+        }
     }
 
     func check(_ title: String, _ on: Bool, _ sel: Selector) -> NSMenuItem {
@@ -468,8 +480,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func toggleLid() {
         let now = !defaults.bool(forKey: Key.lidOn)
         if now && !LidSwitch.helperInstalled {
-            NSApp.activate(ignoringOtherApps: true)
-            if !LidSwitch.installHelper() { return }   // user cancelled the password prompt
+            approve { ok in   // ok is false if the user cancelled the password prompt
+                guard ok else { return }
+                defaults.set(true, forKey: Key.lidOn)
+                self.evaluate()
+            }
+            return
         }
         defaults.set(now, forKey: Key.lidOn)
         evaluate()
@@ -538,7 +554,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         loginCheckbox?.state = SMAppService.mainApp.status == .enabled ? .on : .off
     }
 
-    @objc func welcomeSetup() { if LidSwitch.installHelper() { evaluate() }; refreshWelcome() }
+    @objc func welcomeSetup() { approve { _ in } }
     @objc func welcomeLogin() { toggleLogin(); refreshWelcome() }
     @objc func closeWelcome() { welcomeWindow?.close() }
 
